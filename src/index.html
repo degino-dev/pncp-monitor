@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PNCP Monitor — Décio Camargo</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>📋 PNCP Monitor — Décio Camargo</h1>
+    <p>Distribuidora de Produtos Laboratoriais — Busca Inteligente de Editais</p>
+    <div class="header-botoes">
+      <button id="btnFeedback">📌 Produtos</button>
+      <button id="btnLimparCache">🗑️ Cache</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="buscasSalvas" style="margin-bottom: 12px;"></div>
+
+    <section class="filtros">
+      <div class="filtro-row">
+        <div class="filtro-group"><label>Data Inicial</label><input type="date" id="dataInicial"></div>
+        <div class="filtro-group"><label>Data Final</label><input type="date" id="dataFinal"></div>
+        <div class="filtro-group">
+          <label>Estado (UF)</label>
+          <select id="uf">
+            <option value="">Todos</option>
+            <option value="AC">Acre</option><option value="AL">Alagoas</option><option value="AP">Amapá</option><option value="AM">Amazonas</option>
+            <option value="BA">Bahia</option><option value="CE">Ceará</option><option value="DF">Distrito Federal</option><option value="ES">Espírito Santo</option>
+            <option value="GO">Goiás</option><option value="MA">Maranhão</option><option value="MT">Mato Grosso</option><option value="MS">Mato Grosso do Sul</option>
+            <option value="MG">Minas Gerais</option><option value="PA">Pará</option><option value="PB">Paraíba</option><option value="PR">Paraná</option>
+            <option value="PE">Pernambuco</option><option value="PI">Piauí</option><option value="RJ">Rio de Janeiro</option><option value="RN">Rio Grande do Norte</option>
+            <option value="RS">Rio Grande do Sul</option><option value="RO">Rondônia</option><option value="RR">Roraima</option><option value="SC">Santa Catarina</option>
+            <option value="SP">São Paulo</option><option value="SE">Sergipe</option><option value="TO">Tocantins</option>
+          </select>
+        </div>
+        <div class="filtro-group" id="cidadeGroup" style="display:none;"><label>Cidade</label><select id="cidade"><option value="">Todas</option></select></div>
+        <div class="filtro-group">
+          <label>Modalidade</label>
+          <select id="modalidade">
+            <option value="">Todas</option><option value="1">Concorrência</option><option value="2">Tomada de Preços</option><option value="3">Convite</option>
+            <option value="4">Concurso</option><option value="5">Leilão</option><option value="6">Pregão</option><option value="7">Diálogo Competitivo</option>
+            <option value="8">Pregão Eletrônico</option><option value="9">Dispensa</option><option value="10">Inexigibilidade</option><option value="12">Credenciamento</option>
+          </select>
+        </div>
+        <div class="filtro-group"><label>Nº do Edital</label><input type="text" id="numeroEdital" placeholder="ex: 30/2026"></div>
+        <div class="filtro-group"><label>CNPJ (opcional)</label><input type="text" id="cnpj" placeholder="00.000.000/0001-00"></div>
+        <div class="filtro-group" style="align-self: flex-end; display: flex; gap: 8px;">
+          <button id="btnSalvarBusca" class="btn-secundario">💾 Salvar</button>
+          <button id="btnBuscar" class="btn-buscar">🔍 Buscar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="filtro-inteligente" id="filtroInteligente">
+      <div class="filtro-inteligente-header" onclick="toggleFiltroInteligente()">
+        <div>
+          <h2>🧪 Filtro Inteligente — Produtos Laboratoriais</h2>
+          <p class="filtro-inteligente-desc">Marque as categorias que a Décio Camargo distribui.</p>
+        </div>
+        <button class="filtro-inteligente-toggle" type="button">▼</button>
+      </div>
+      <div class="filtro-inteligente-conteudo">
+        <div class="cat-grid">
+          <label class="cat-item"><input type="checkbox" class="cat-check" data-cat="insumos" checked><span>Insumos e Reagentes</span></label>
+          <label class="cat-item"><input type="checkbox" class="cat-check" data-cat="equipamentos" checked><span>Equipamentos Laboratoriais</span></label>
+          <label class="cat-item"><input type="checkbox" class="cat-check" data-cat="descartaveis" checked><span>Materiais Descartáveis</span></label>
+          <label class="cat-item"><input type="checkbox" class="cat-check" data-cat="medicos" checked><span>Produtos Médicos/Hospitalares</span></label>
+          <label class="cat-item"><input type="checkbox" class="cat-check" data-cat="diagnostico" checked><span>Diagnóstico e Análises Clínicas</span></label>
+          <label class="cat-item"><input type="checkbox" class="cat-check" data-cat="farmacia" checked><span>Farmácia e Medicamentos</span></label>
+        </div>
+        <div class="filtro-row" style="margin-top: 16px;">
+          <div class="filtro-group" style="flex: 2;"><label>Palavras-chave adicionais</label><input type="text" id="palavrasChave" placeholder="ex: cromatografia, HPLC, espectrometria"></div>
+          <div class="filtro-group"><label>Modo do filtro</label><select id="modoFiltro"><option value="destacar">Destacar relevantes</option><option value="apenas">Apenas relevantes</option></select></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="barra-resultados">
+      <div class="barra-esquerda">
+        <h2 id="totalResultados"></h2>
+        <button id="btnExportar" class="btn-exportar" style="display:none;">📊 Excel</button>
+      </div>
+      <div class="barra-direita">
+        <input type="text" id="buscaTexto" placeholder="🔍 Filtrar no objeto..." style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:220px;">
+        <select id="ordenacao" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+          <option value="relevancia">Ordenar: Relevância</option>
+          <option value="encerramento">Ordenar: Encerramento</option>
+          <option value="valor">Ordenar: Maior valor</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="status" class="status-loading"></div>
+    <div id="resumoFiltro" class="resumo-filtro"></div>
+    <div id="statsPanel" class="stats-panel" style="display:none;"></div>
+    <div id="listaEditais" class="lista-editais"></div>
+    <div id="paginacao" class="paginacao"></div>
+  </main>
+
+  <div id="modal" class="modal-hidden">
+    <div class="modal-content">
+      <div class="modal-header"><h2>Detalhes do Edital</h2><button id="closeModal">✕</button></div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="modalFeedback" class="modal-hidden">
+    <div class="modal-content" style="max-width:700px;">
+      <div class="modal-header"><h2>📌 Produtos Cadastrados</h2><button id="closeModalFeedback">✕</button></div>
+      <div id="modalFeedbackBody"></div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

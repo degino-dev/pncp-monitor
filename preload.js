@@ -1,0 +1,26 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('pncpAPI', {
+  fetchEditais: (p) => ipcRenderer.invoke('pncp:fetchEditais', p),
+  fetchDetalhes: (n) => ipcRenderer.invoke('pncp:fetchDetalhes', n),
+  fetchOrgao: (c) => ipcRenderer.invoke('pncp:fetchOrgao', c),
+  openExternal: (u) => ipcRenderer.invoke('shell:openExternal', u),
+  fetchItens: (n) => ipcRenderer.invoke('pncp:fetchItens', n),
+  fetchArquivos: (n) => ipcRenderer.invoke('pncp:fetchArquivos', n),
+  limparCache: () => ipcRenderer.invoke('pncp:limparCache'),
+  statsCache: () => ipcRenderer.invoke('pncp:statsCache'),
+  buscarCidades: (uf) => ipcRenderer.invoke('ibge:buscarCidades', uf),
+  obterFeedback: () => ipcRenderer.invoke('feedback:obter'),
+  marcarFeedback: (d, t, n, o) => ipcRenderer.invoke('feedback:marcar', d, t, n, o),
+  removerFeedback: (d) => ipcRenderer.invoke('feedback:remover', d),
+  obterFavoritos: () => ipcRenderer.invoke('favoritos:obter'),
+  marcarFavorito: (n, s) => ipcRenderer.invoke('favoritos:marcar', n, s),
+  obterNota: (n) => ipcRenderer.invoke('notas:obter', n),
+  salvarNota: (n, t) => ipcRenderer.invoke('notas:salvar', n, t),
+  obterBuscas: () => ipcRenderer.invoke('buscas:obter'),
+  salvarBusca: (n, p) => ipcRenderer.invoke('buscas:salvar', n, p),
+  removerBusca: (i) => ipcRenderer.invoke('buscas:remover', i),
+  criarLembrete: (d) => ipcRenderer.invoke('calendario:criarLembrete', d),
+    baixarAtualizacao: () => ipcRenderer.invoke('update:baixar'),
+  instalarAtualizacao: () => ipcRenderer.invoke('update:instalar'),
+});

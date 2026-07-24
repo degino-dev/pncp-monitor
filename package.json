@@ -1,6 +1,6 @@
 {
   "name": "pncp-monitor",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "PNCP Monitor — Décio Camargo — Busca Inteligente de Editais",
   "main": "main.js",
   "scripts": {

@@ -1,473 +1,283 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <title>PNCP Admin — Gestão de Licenças</title>
-    <style>
-        :root { --primary: #1a237e; --bg: #f4f7f9; --text: #333; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); }
-        
-        /* Tela de configuração inicial */
-        #setupScreen {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #1a237e, #3949ab);
-        }
-        #setupScreen .card {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            width: 420px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        #setupScreen h1 { font-size: 22px; color: #1a237e; margin-bottom: 8px; }
-        #setupScreen p { font-size: 14px; color: #666; margin-bottom: 24px; }
-        #setupScreen label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 4px; }
-        #setupScreen input {
-            width: 100%;
-            padding: 10px 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 16px;
-            outline: none;
-        }
-        #setupScreen input:focus { border-color: #3949ab; }
-        #setupScreen button {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #1a237e, #3949ab);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-        #setupScreen button:hover { opacity: 0.95; }
-        #setupError { color: #c62828; font-size: 13px; margin-top: 12px; display: none; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PNCP Admin</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f7f9; color: #333; }
 
-        /* Painel principal */
-        #mainPanel { display: none; }
-        .sidebar {
-            width: 250px;
-            height: 100vh;
-            background: var(--primary);
-            color: white;
-            padding: 24px;
-            position: fixed;
-            top: 0;
-            left: 0;
-        }
-        .sidebar h2 { font-size: 20px; margin-bottom: 4px; }
-        .sidebar p { font-size: 12px; opacity: 0.7; }
-        .sidebar hr { border: none; border-top: 1px solid rgba(255,255,255,0.2); margin: 20px 0; }
-        .sidebar nav p {
-            padding: 10px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            opacity: 1;
-            background: rgba(255,255,255,0.1);
-        }
-        .main-content {
-            margin-left: 290px;
-            padding: 40px;
-            width: calc(100% - 290px);
-        }
-        .main-content h1 { font-size: 26px; color: #1a237e; margin-bottom: 24px; }
-        .card {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            margin-bottom: 24px;
-        }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-        .card-header h3 { font-size: 18px; color: #333; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
-        th { font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
-        .badge.active { background: #e8f5e9; color: #2e7d32; }
-        .badge.trial { background: #e3f2fd; color: #1565c0; }
-        .badge.expired { background: #ffebee; color: #c62828; }
-        .badge.inactive { background: #f5f5f5; color: #666; }
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            margin: 2px;
-        }
-        .btn-primary { background: #1a237e; color: white; }
-        .btn-success { background: #2e7d32; color: white; }
-        .btn-danger { background: #c62828; color: white; }
-        .btn-warning { background: #f57f17; color: white; }
-        .btn-sm { padding: 5px 10px; font-size: 12px; }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            text-align: center;
-        }
-        .stat-card .num { font-size: 32px; font-weight: 800; color: #1a237e; }
-        .stat-card .label { font-size: 12px; color: #666; margin-top: 4px; }
-        code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
-        .empty-state { text-align: center; padding: 40px; color: #999; }
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal {
-            background: white;
-            border-radius: 16px;
-            padding: 32px;
-            width: 400px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        .modal h2 { margin-bottom: 20px; color: #1a237e; }
-        .modal .form-group { margin-bottom: 16px; }
-        .modal .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-        .modal .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-        }
-        .modal .form-group input:focus { border-color: #3949ab; }
-        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
-        .connection-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            background: #e8f5e9;
-            color: #2e7d32;
-            margin-bottom: 16px;
-        }
-        .connection-status .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #2e7d32;
-        }
-    </style>
+#setupScreen {
+  display: flex; align-items: center; justify-content: center;
+  height: 100vh; width: 100vw;
+  background: linear-gradient(135deg, #1a237e, #3949ab);
+  position: fixed; top: 0; left: 0; z-index: 2000;
+}
+#setupScreen .card {
+  background: #fff; border-radius: 16px; padding: 40px;
+  max-width: 420px; width: 90%; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+#setupScreen h1 { font-size: 24px; color: #1a237e; margin-bottom: 8px; }
+#setupScreen p { font-size: 14px; color: #757575; margin-bottom: 24px; }
+.form-group { text-align: left; margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.form-group input {
+  width: 100%; padding: 12px; border: 2px solid #e0e0e0;
+  border-radius: 8px; font-size: 14px; outline: none;
+}
+.form-group input:focus { border-color: #3949ab; }
+.btn-connect {
+  width: 100%; padding: 14px; background: linear-gradient(135deg, #1a237e, #3949ab);
+  color: #fff; border: none; border-radius: 8px;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+}
+.btn-connect:hover { opacity: 0.9; }
+#setupError { color: #c62828; font-size: 13px; margin-top: 16px; display: none; background: #ffebee; padding: 10px; border-radius: 6px; }
+
+#mainPanel { display: none; }
+.sidebar {
+  width: 250px; height: 100vh; background: #1a237e;
+  color: #fff; padding: 24px; position: fixed; top: 0; left: 0;
+}
+.sidebar h2 { font-size: 20px; margin-bottom: 4px; }
+.sidebar p { font-size: 12px; opacity: 0.7; margin-bottom: 20px; }
+.sidebar hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0; }
+.nav-item { padding: 12px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 14px; font-weight: 600; }
+
+.main-content { margin-left: 250px; padding: 40px; }
+.header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.header-area h1 { font-size: 28px; color: #1a237e; }
+
+.connection-status { display: inline-flex; align-items: center; gap: 8px; background: #e8f5e9; color: #2e7d32; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.status-dot { width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; display: inline-block; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+.stat-card { background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
+.stat-card .num { font-size: 32px; font-weight: 800; color: #1a237e; display: block; }
+.stat-card .label { font-size: 13px; color: #757575; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
+
+.card-table { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; }
+.card-header { padding: 20px 24px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.card-header h3 { font-size: 18px; color: #333; }
+table { width: 100%; border-collapse: collapse; }
+th { background: #f8f9fa; padding: 14px 24px; text-align: left; font-size: 12px; text-transform: uppercase; color: #757575; }
+td { padding: 16px 24px; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: middle; }
+
+.badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.badge-active { background: #e8f5e9; color: #2e7d32; }
+.badge-trial { background: #e3f2fd; color: #1565c0; }
+.badge-expired { background: #ffebee; color: #c62828; }
+.badge-inactive { background: #f5f5f5; color: #757575; }
+code { background: #f1f3f4; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #d81b60; }
+
+.btn { padding: 8px 14px; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.btn-primary { background: #1a237e; color: #fff; }
+.btn-success { background: #2e7d32; color: #fff; }
+.btn-danger { background: #c62828; color: #fff; }
+.btn-warning { background: #f57f17; color: #fff; }
+.btn:hover { opacity: 0.9; }
+
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 3000; align-items: center; justify-content: center; }
+.modal-overlay.active { display: flex; }
+.modal { background: #fff; width: 100%; max-width: 450px; border-radius: 16px; padding: 32px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
+.modal h2 { margin-bottom: 24px; color: #1a237e; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.empty-state { padding: 60px; text-align: center; color: #999; font-style: italic; }
+</style>
 </head>
 <body>
 
-<!-- TELA DE CONFIGURAÇÃO INICIAL -->
 <div id="setupScreen">
-    <div class="card">
-        <h1>🔧 PNCP Admin</h1>
-        <p>Configure a URL da API de licenciamento</p>
-        
-        <label>URL da API</label>
-        <input type="url" id="apiUrlInput" placeholder="https://pncp-licencas-api.onrender.com/api" value="https://pncp-licencas-api.onrender.com/api">
-        
-        <label>Senha de Administrador</label>
-        <input type="password" id="adminKeyInput" placeholder="pncpAdmin2026!" value="pncpAdmin2026!">
-        
-        <button onclick="connect()">🔗 CONECTAR</button>
-        <div id="setupError"></div>
+  <div class="card">
+    <h1>PNCP Admin</h1>
+    <p>Configure a URL da API de licenciamento</p>
+    <div class="form-group">
+      <label>URL da API</label>
+      <input type="url" id="apiUrlInput" value="https://pncp-licencas-api.onrender.com/api">
     </div>
+    <div class="form-group">
+      <label>Senha de Administrador</label>
+      <input type="password" id="adminKeyInput" value="pncpAdmin2026!">
+    </div>
+    <button class="btn-connect" onclick="connect()">CONECTAR AO SERVIDOR</button>
+    <div id="setupError"></div>
+  </div>
 </div>
 
-<!-- PAINEL PRINCIPAL -->
 <div id="mainPanel">
-    <div class="sidebar">
-        <h2>🔬 PNCP Admin</h2>
-        <p>v2.0.0 — Gestão de Licenças</p>
-        <hr>
-        <nav>
-            <p>📊 Dashboard</p>
-        </nav>
-    </div>
-    <div class="main-content">
+  <div class="sidebar">
+    <h2>PNCP Admin</h2>
+    <p>v2.0.0 — Gestão de Licenças</p>
+    <hr>
+    <div class="nav-item">Dashboard</div>
+  </div>
+  <div class="main-content">
+    <div class="header-area">
+      <div>
         <h1>Gestão de Usuários</h1>
-
-        <div class="connection-status" id="connStatus">
-            <span class="dot"></span>
-            <span id="connUrl">Conectado</span>
+        <div class="connection-status">
+          <span class="status-dot"></span>
+          <span id="displayUrl">Conectado</span>
         </div>
-
-        <div class="stats-grid" id="statsGrid">
-            <div class="stat-card"><div class="num" id="statTotal">0</div><div class="label">Total</div></div>
-            <div class="stat-card"><div class="num" id="statActive">0</div><div class="label">Ativos</div></div>
-            <div class="stat-card"><div class="num" id="statTrial">0</div><div class="label">Trial</div></div>
-            <div class="stat-card"><div class="num" id="statExpired">0</div><div class="label">Expirados</div></div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h3>Usuários Cadastrados</h3>
-                <button class="btn btn-primary" onclick="abrirModalNovo()">+ Novo Usuário</button>
-            </div>
-
-            <div id="userTableContainer">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Usuário</th>
-                            <th>Nome</th>
-                            <th>Email</th>
-                            <th>Chave</th>
-                            <th>Status</th>
-                            <th>Trial até</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="userList"></tbody>
-                </table>
-            </div>
-            <div class="empty-state" id="emptyState">Nenhum usuário cadastrado ainda.</div>
-        </div>
+      </div>
+      <button class="btn btn-primary" style="padding:12px 20px;font-size:14px" onclick="abrirModalNovo()">+ NOVO USUARIO</button>
     </div>
+    <div class="stats-grid">
+      <div class="stat-card"><span class="num" id="statTotal">0</span><span class="label">Total</span></div>
+      <div class="stat-card"><span class="num" id="statActive" style="color:#2e7d32">0</span><span class="label">Ativos</span></div>
+      <div class="stat-card"><span class="num" id="statTrial" style="color:#1565c0">0</span><span class="label">Trial</span></div>
+      <div class="stat-card"><span class="num" id="statExpired" style="color:#c62828">0</span><span class="label">Expirados</span></div>
+    </div>
+    <div class="card-table">
+      <div class="card-header"><h3>Usuarios Cadastrados</h3></div>
+      <table>
+        <thead><tr><th>Usuario</th><th>Nome</th><th>Email</th><th>Chave</th><th>Status</th><th>Trial ate</th><th>Acoes</th></tr></thead>
+        <tbody id="userList"></tbody>
+      </table>
+      <div id="emptyState" class="empty-state" style="display:none">Nenhum usuario encontrado.</div>
+    </div>
+  </div>
 </div>
 
-<!-- MODAL NOVO USUÁRIO -->
 <div class="modal-overlay" id="modalNovo">
-    <div class="modal">
-        <h2>+ Novo Usuário</h2>
-        <div class="form-group">
-            <label>Usuário *</label>
-            <input type="text" id="newUsername" placeholder="Ex: admin">
-        </div>
-        <div class="form-group">
-            <label>Senha *</label>
-            <input type="password" id="newPassword" placeholder="Mínimo 6 caracteres">
-        </div>
-        <div class="form-group">
-            <label>Nome *</label>
-            <input type="text" id="newNome" placeholder="Nome completo">
-        </div>
-        <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="newEmail" placeholder="email@exemplo.com">
-        </div>
-        <div class="modal-actions">
-            <button class="btn btn-primary" onclick="cadastrar()">Cadastrar</button>
-            <button class="btn" style="background:#eee;color:#333;" onclick="fecharModal('modalNovo')">Cancelar</button>
-        </div>
-        <div id="modalError" style="color:#c62828;font-size:13px;margin-top:12px;display:none;"></div>
+  <div class="modal">
+    <h2>+ Novo Usuario</h2>
+    <div class="form-group"><label>Usuario *</label><input type="text" id="newUsername"></div>
+    <div class="form-group"><label>Senha * (min. 6)</label><input type="password" id="newPassword"></div>
+    <div class="form-group"><label>Nome *</label><input type="text" id="newNome"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="newEmail"></div>
+    <div id="modalError" style="color:#c62828;font-size:12px;margin-bottom:10px;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn" style="background:#eee;color:#333" onclick="fecharModal('modalNovo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="cadastrar()">Cadastrar</button>
     </div>
+  </div>
 </div>
 
 <script>
-    let API_URL = '';
-    let ADMIN_KEY = '';
+let API_URL = '';
+let ADMIN_KEY = '';
 
-    function connect() {
-        const urlInput = document.getElementById('apiUrlInput').value.trim();
-        const keyInput = document.getElementById('adminKeyInput').value.trim();
-        const errorDiv = document.getElementById('setupError');
+async function connect() {
+  const urlInput = document.getElementById('apiUrlInput').value.trim();
+  const keyInput = document.getElementById('adminKeyInput').value.trim();
+  const errorDiv = document.getElementById('setupError');
 
-        if (!urlInput) {
-            errorDiv.textContent = 'Digite a URL da API.';
-            errorDiv.style.display = 'block';
-            return;
-        }
+  if (!urlInput) { errorDiv.textContent = 'Digite a URL da API.'; errorDiv.style.display = 'block'; return; }
 
-        API_URL = urlInput.replace(/\/+$/, '');
-        ADMIN_KEY = keyInput || 'pncpAdmin2026!';
+  API_URL = urlInput.replace(/\/+$/, '');
+  ADMIN_KEY = keyInput || 'pncpAdmin2026!';
 
-        // Testa conexão
-        fetch(API_URL + '/health')
-            .then(r => r.json())
-            .then(data => {
-                if (data.status === 'ok') {
-                    document.getElementById('setupScreen').style.display = 'none';
-                    document.getElementById('mainPanel').style.display = 'block';
-                    document.getElementById('connUrl').textContent = 'Conectado a ' + API_URL;
-                    carregarDados();
-                } else {
-                    throw new Error('Resposta inesperada');
-                }
-            })
-            .catch(err => {
-                errorDiv.textContent = 'Erro ao conectar: ' + err.message + '. Verifique a URL.';
-                errorDiv.style.display = 'block';
-            });
+  try {
+    const r = await fetch(API_URL + '/health');
+    const data = await r.json();
+    if (data.status === 'ok') {
+      document.getElementById('setupScreen').style.display = 'none';
+      document.getElementById('mainPanel').style.display = 'block';
+      document.getElementById('displayUrl').textContent = 'Conectado: ' + API_URL;
+      carregarDados();
+    } else { throw new Error('Resposta inesperada'); }
+  } catch (err) {
+    errorDiv.textContent = 'Erro ao conectar: ' + err.message;
+    errorDiv.style.display = 'block';
+  }
+}
+
+async function apiFetch(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY };
+  if (options.headers) Object.assign(headers, options.headers);
+  const res = await fetch(API_URL + path, { ...options, headers });
+  return res.json();
+}
+
+async function carregarDados() { await Promise.all([carregarUsers(), carregarStats()]); }
+
+async function carregarStats() {
+  try {
+    const data = await apiFetch('/stats');
+    if (data.success && data.stats) {
+      document.getElementById('statTotal').textContent = data.stats.total || 0;
+      document.getElementById('statActive').textContent = data.stats.active || 0;
+      document.getElementById('statTrial').textContent = data.stats.trial || 0;
+      document.getElementById('statExpired').textContent = data.stats.expired || 0;
     }
+  } catch(e) { console.error(e); }
+}
 
-    async function apiFetch(path, options = {}) {
-        const res = await fetch(API_URL + path, {
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-admin-key': ADMIN_KEY,
-                ...options.headers 
-            },
-            ...options
-        });
-        return res.json();
-    }
-
-    async function carregarDados() {
-        await Promise.all([carregarUsers(), carregarStats()]);
-    }
-
-    async function carregarUsers() {
-        const data = await apiFetch('/users');
-        const list = document.getElementById('userList');
-        const empty = document.getElementById('emptyState');
-
-        if (!data.success || !data.users || data.users.length === 0) {
-            list.innerHTML = '';
-            empty.style.display = 'block';
-            return;
-        }
-
-        empty.style.display = 'none';
-        list.innerHTML = data.users.map(u => {
-            const trialDate = u.trialEndsAt ? new Date(u.trialEndsAt).toLocaleDateString('pt-BR') : '-';
-            return `<tr>
-                <td><strong>${u.username}</strong></td>
-                <td>${u.nome}</td>
-                <td>${u.email || '-'}</td>
-                <td><code>${u.licenseKey}</code></td>
-                <td><span class="badge ${u.status}">${(u.status || 'desconhecido').toUpperCase()}</span></td>
-                <td style="font-size:12px">${trialDate}</td>
-                <td>
-                    ${u.status === 'trial' ? `<button class="btn btn-success btn-sm" onclick="ativar('${u.username}')">Ativar</button>` : ''}
-                    ${u.status === 'active' || u.status === 'inactive' ? `<button class="btn btn-warning btn-sm" onclick="estenderTrial('${u.username}')">+ Trial</button>` : ''}
-                    <button class="btn btn-danger btn-sm" onclick="confirmarDelete('${u.username}')">Excluir</button>
-                </td>
-            </tr>`;
-        }).join('');
-    }
-
-    async function carregarStats() {
-        const data = await apiFetch('/stats');
-        if (data.success && data.stats) {
-            document.getElementById('statTotal').textContent = data.stats.total || 0;
-            document.getElementById('statActive').textContent = data.stats.active || 0;
-            document.getElementById('statTrial').textContent = data.stats.trial || 0;
-            document.getElementById('statExpired').textContent = data.stats.expired || 0;
-        }
-    }
-
-    function abrirModalNovo() {
-        document.getElementById('modalNovo').classList.add('active');
-        document.getElementById('modalError').style.display = 'none';
-    }
-
-    function fecharModal(id) {
-        document.getElementById(id).classList.remove('active');
-    }
-
-    async function cadastrar() {
-        const username = document.getElementById('newUsername').value.trim();
-        const password = document.getElementById('newPassword').value;
-        const nome = document.getElementById('newNome').value.trim();
-        const email = document.getElementById('newEmail').value.trim();
-        const errorDiv = document.getElementById('modalError');
-
-        if (!username || !password || !nome) {
-            errorDiv.textContent = 'Preencha Usuário, Senha e Nome.';
-            errorDiv.style.display = 'block';
-            return;
-        }
-
-        if (password.length < 6) {
-            errorDiv.textContent = 'Senha deve ter no mínimo 6 caracteres.';
-            errorDiv.style.display = 'block';
-            return;
-        }
-
-        const data = await apiFetch('/register', {
-            method: 'POST',
-            body: JSON.stringify({ username, password, nome, email })
-        });
-
-        if (data.success) {
-            alert('✅ Usuário cadastrado!\n\nChave de Licença: ' + data.licenseKey + '\n\nCopie esta chave para usar no login do app.');
-            fecharModal('modalNovo');
-            document.getElementById('newUsername').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('newNome').value = '';
-            document.getElementById('newEmail').value = '';
-            await carregarDados();
-        } else {
-            errorDiv.textContent = data.error || 'Erro ao cadastrar.';
-            errorDiv.style.display = 'block';
-        }
-    }
-
-    async function ativar(username) {
-        const data = await apiFetch('/users/activate', {
-            method: 'POST',
-            body: JSON.stringify({ username })
-        });
-        if (data.success) await carregarDados();
-        else alert('Erro: ' + (data.error || 'desconhecido'));
-    }
-
-    async function estenderTrial(username) {
-        const dias = prompt('Quantos dias para estender o trial?', '7');
-        if (!dias || isNaN(dias) || parseInt(dias) <= 0) return;
-        
-        const data = await apiFetch('/users/extend-trial', {
-            method: 'POST',
-            body: JSON.stringify({ username, days: parseInt(dias) })
-        });
-        if (data.success) await carregarDados();
-        else alert('Erro: ' + (data.error || 'desconhecido'));
-    }
-
-    function confirmarDelete(username) {
-        if (confirm('Tem certeza que deseja EXCLUIR o usuário "' + username + '"?')) {
-            deletar(username);
-        }
-    }
-
-    async function deletar(username) {
-        const data = await apiFetch('/users/delete', {
-            method: 'POST',
-            body: JSON.stringify({ username })
-        });
-        if (data.success) await carregarDados();
-        else alert('Erro: ' + (data.error || 'desconhecido'));
-    }
-
-    // Fecha modal ao clicar fora
-    document.getElementById('modalNovo').addEventListener('click', function(e) {
-        if (e.target === this) fecharModal('modalNovo');
+async function carregarUsers() {
+  try {
+    const data = await apiFetch('/users');
+    const tbody = document.getElementById('userList');
+    const empty = document.getElementById('emptyState');
+    tbody.innerHTML = '';
+    if (!data.success || !data.users || data.users.length === 0) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    data.users.forEach(u => {
+      const trialDate = u.trialEndsAt ? new Date(u.trialEndsAt).toLocaleDateString('pt-BR') : '-';
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td><strong>'+u.username+'</strong></td><td>'+u.nome+'</td><td>'+(u.email||'-')+'</td><td><code>'+u.licenseKey+'</code></td><td><span class="badge badge-'+u.status+'">'+u.status+'</span></td><td>'+trialDate+'</td><td>'+
+        (u.status==='trial' ? '<button class="btn btn-success" onclick="ativar(\''+u.username+'\')">Ativar</button> ' : '') +
+        (u.status!=='inactive' ? '<button class="btn btn-warning" onclick="estenderTrial(\''+u.username+'\')">+Trial</button> ' : '') +
+        '<button class="btn btn-danger" onclick="confirmarDelete(\''+u.username+'\')">Excluir</button></td>';
+      tbody.appendChild(tr);
     });
+  } catch(e) { console.error(e); }
+}
 
-    // Enter no campo de URL conecta
-    document.getElementById('apiUrlInput').addEventListener('keyup', function(e) {
-        if (e.key === 'Enter') connect();
-    });
-    document.getElementById('adminKeyInput').addEventListener('keyup', function(e) {
-        if (e.key === 'Enter') connect();
-    });
+function abrirModalNovo() { document.getElementById('modalNovo').classList.add('active'); document.getElementById('modalError').style.display = 'none'; }
+function fecharModal(id) { document.getElementById(id).classList.remove('active'); }
+
+async function cadastrar() {
+  const username = document.getElementById('newUsername').value.trim();
+  const password = document.getElementById('newPassword').value;
+  const nome = document.getElementById('newNome').value.trim();
+  const email = document.getElementById('newEmail').value.trim();
+  const errorDiv = document.getElementById('modalError');
+  if (!username || !password || !nome) { errorDiv.textContent = 'Preencha Usuario, Senha e Nome.'; errorDiv.style.display = 'block'; return; }
+  if (password.length < 6) { errorDiv.textContent = 'Senha deve ter no minimo 6 caracteres.'; errorDiv.style.display = 'block'; return; }
+  try {
+    const data = await apiFetch('/register', { method: 'POST', body: JSON.stringify({ username, password, nome, email }) });
+    if (data.success) {
+      alert('Usuario cadastrado!\n\nChave de Licenca: ' + data.licenseKey + '\n\nCopie esta chave para usar no login do app.');
+      fecharModal('modalNovo');
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('newNome').value = '';
+      document.getElementById('newEmail').value = '';
+      carregarDados();
+    } else { errorDiv.textContent = data.error || 'Erro ao cadastrar.'; errorDiv.style.display = 'block'; }
+  } catch(e) { errorDiv.textContent = 'Erro de conexao.'; errorDiv.style.display = 'block'; }
+}
+
+async function ativar(username) {
+  if (!confirm('Ativar licenca de "'+username+'"?')) return;
+  const data = await apiFetch('/users/activate', { method: 'POST', body: JSON.stringify({ username }) });
+  if (data.success) carregarDados();
+}
+
+async function estenderTrial(username) {
+  const dias = prompt('Quantos dias para estender o trial de "'+username+'"?', '7');
+  if (!dias) return;
+  const num = parseInt(dias);
+  if (isNaN(num) || num <= 0) return alert('Numero invalido.');
+  const data = await apiFetch('/users/extend-trial', { method: 'POST', body: JSON.stringify({ username, days: num }) });
+  if (data.success) carregarDados();
+}
+
+function confirmarDelete(username) {
+  if (confirm('Excluir permanentemente "'+username+'"?')) { deletar(username); }
+}
+
+async function deletar(username) {
+  const data = await apiFetch('/users/delete', { method: 'POST', body: JSON.stringify({ username }) });
+  if (data.success) carregarDados();
+}
+
+document.getElementById('modalNovo').addEventListener('click', function(e) { if (e.target === this) fecharModal('modalNovo'); });
+document.getElementById('apiUrlInput').addEventListener('keypress', e => { if (e.key === 'Enter') connect(); });
+document.getElementById('adminKeyInput').addEventListener('keypress', e => { if (e.key === 'Enter') connect(); });
 </script>
 </body>
 </html>

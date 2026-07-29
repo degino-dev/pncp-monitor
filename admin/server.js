@@ -5,21 +5,15 @@ const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = "pncpAdmin2026!";
 const DB_PATH = '/tmp/licencas.db';
-
 app.use(cors());
 app.use(express.json());
-
 let db;
-
 async function initDatabase() {
   const SQL = await initSqlJs();
-  
-  // Tenta carregar DB existente ou cria novo
   try {
     if (fs.existsSync(DB_PATH)) {
       const buffer = fs.readFileSync(DB_PATH);
@@ -30,7 +24,6 @@ async function initDatabase() {
   } catch (e) {
     db = new SQL.Database();
   }
-
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,10 +37,8 @@ async function initDatabase() {
       createdAt TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
-
   salvarDB();
 }
-
 function salvarDB() {
   try {
     const data = db.export();
@@ -57,7 +48,6 @@ function salvarDB() {
     console.error('Erro ao salvar DB:', e.message);
   }
 }
-
 function query(sql, params = []) {
   const stmt = db.prepare(sql);
   if (params.length > 0) stmt.bind(params);
@@ -68,18 +58,14 @@ function query(sql, params = []) {
   stmt.free();
   return rows;
 }
-
 function queryOne(sql, params = []) {
   const rows = query(sql, params);
   return rows.length > 0 ? rows[0] : null;
 }
-
 function execute(sql, params = []) {
   db.run(sql, params);
   salvarDB();
 }
-
-// Middleware Admin
 function authAdmin(req, res, next) {
   const key = req.headers['x-admin-key'];
   if (key !== ADMIN_KEY) return res.status(401).json({ success: false, error: "Acesso negado" });
@@ -94,17 +80,14 @@ app.post('/api/register', async (req, res) => {
     if (!username || !password || !nome) {
       return res.json({ success: false, error: "Campos obrigatorios: username, password, nome" });
     }
-
     const hash = bcrypt.hashSync(password, 10);
     const licenseKey = uuidv4();
     const trialEnds = new Date();
     trialEnds.setDate(trialEnds.getDate() + 7);
-
     execute(
       'INSERT INTO users (username, password, nome, email, licenseKey, status, trialEndsAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [username, hash, nome, email || '', licenseKey, 'trial', trialEnds.toISOString()]
     );
-
     res.json({
       success: true,
       user: { username, nome, email: email || '', licenseKey, status: 'trial', trialEndsAt: trialEnds.toISOString() }
@@ -117,21 +100,19 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
+// =========================================================
+// MODIFICADO: Login ACEITA apenas usuário e senha
+// A validação de licenseKey foi REMOVIDA
+// =========================================================
 app.post('/api/login', (req, res) => {
   try {
-    const { username, password, licenseKey } = req.body;
+    const { username, password } = req.body;
     const user = queryOne('SELECT * FROM users WHERE username = ?', [username]);
-
     if (!user) return res.json({ success: false, error: "Usuario nao encontrado." });
     if (!bcrypt.compareSync(password, user.password)) {
       return res.json({ success: false, error: "Senha incorreta." });
     }
-    if (user.licenseKey !== licenseKey) {
-      return res.json({ success: false, error: "Chave de licenca invalida." });
-    }
-
     const agora = new Date();
-
     if (user.status === 'trial') {
       const trialEnd = new Date(user.trialEndsAt);
       if (agora > trialEnd) {
@@ -139,14 +120,12 @@ app.post('/api/login', (req, res) => {
         return res.json({ success: false, error: "Periodo de teste expirou (7 dias). Renove sua licenca." });
       }
     }
-
     if (user.status === 'expired') {
       return res.json({ success: false, error: "Licenca expirada. Contate o administrador." });
     }
     if (user.status === 'inactive') {
       return res.json({ success: false, error: "Licenca desativada. Contate o administrador." });
     }
-
     res.json({
       success: true,
       user: {
@@ -167,18 +146,14 @@ app.get('/api/validate-key', (req, res) => {
   try {
     const { key } = req.query;
     const user = queryOne('SELECT username, status, trialEndsAt FROM users WHERE licenseKey = ?', [key]);
-
     if (!user) return res.json({ success: false, error: "Chave invalida." });
-
     if (user.status === 'trial' && new Date() > new Date(user.trialEndsAt)) {
       execute('UPDATE users SET status = ? WHERE licenseKey = ?', ['expired', key]);
       return res.json({ success: false, error: "Trial expirado." });
     }
-
     if (user.status !== 'active' && user.status !== 'trial') {
       return res.json({ success: false, error: "Licenca nao esta ativa." });
     }
-
     res.json({ success: true, user });
   } catch (e) {
     res.json({ success: false, error: "Erro interno" });
@@ -252,7 +227,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Inicializa e sobe o servidor
 initDatabase().then(() => {
   app.listen(PORT, () => {
     console.log('PNCP Licencas API rodando na porta ' + PORT);

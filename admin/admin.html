@@ -1,754 +1,473 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PNCP Admin — Gestão de Licenças</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f2f5;
-      display: flex;
-      min-height: 100vh;
-    }
+    <meta charset="UTF-8">
+    <title>PNCP Admin — Gestão de Licenças</title>
+    <style>
+        :root { --primary: #1a237e; --bg: #f4f7f9; --text: #333; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); }
+        
+        /* Tela de configuração inicial */
+        #setupScreen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a237e, #3949ab);
+        }
+        #setupScreen .card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        #setupScreen h1 { font-size: 22px; color: #1a237e; margin-bottom: 8px; }
+        #setupScreen p { font-size: 14px; color: #666; margin-bottom: 24px; }
+        #setupScreen label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 4px; }
+        #setupScreen input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 16px;
+            outline: none;
+        }
+        #setupScreen input:focus { border-color: #3949ab; }
+        #setupScreen button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #1a237e, #3949ab);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        #setupScreen button:hover { opacity: 0.95; }
+        #setupError { color: #c62828; font-size: 13px; margin-top: 12px; display: none; }
 
-    /* Sidebar */
-    .sidebar {
-      width: 240px;
-      background: linear-gradient(180deg, #1a237e 0%, #283593 100%);
-      color: white;
-      padding: 24px 0;
-      position: fixed;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .sidebar-logo {
-      padding: 0 20px 24px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      margin-bottom: 16px;
-    }
-    .sidebar-logo h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
-    .sidebar-logo p { font-size: 11px; opacity: 0.7; margin-top: 2px; }
-    .sidebar nav { flex: 1; }
-    .sidebar nav a {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 20px;
-      color: rgba(255,255,255,0.8);
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s;
-      cursor: pointer;
-      border-left: 3px solid transparent;
-    }
-    .sidebar nav a:hover, .sidebar nav a.active {
-      background: rgba(255,255,255,0.1);
-      color: white;
-      border-left-color: #64b5f6;
-    }
-    .sidebar-footer {
-      padding: 16px 20px;
-      border-top: 1px solid rgba(255,255,255,0.1);
-      font-size: 11px;
-      opacity: 0.5;
-    }
-
-    /* Main */
-    .main {
-      margin-left: 240px;
-      flex: 1;
-      padding: 32px;
-    }
-    .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 28px;
-    }
-    .page-header h2 { font-size: 24px; color: #1a1a1a; font-weight: 700; }
-    .page-header p { font-size: 14px; color: #666; margin-top: 4px; }
-
-    /* Cards */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-    .stat-card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      border-left: 4px solid;
-    }
-    .stat-card .number { font-size: 28px; font-weight: 800; color: #1a1a1a; }
-    .stat-card .label { font-size: 13px; color: #666; margin-top: 4px; }
-    .stat-card.total { border-color: #1a237e; }
-    .stat-card.active { border-color: #2e7d32; }
-    .stat-card.trial { border-color: #1565c0; }
-    .stat-card.expired { border-color: #c62828; }
-    .stat-card.inactive { border-color: #9e9e9e; }
-
-    /* Card de conteúdo */
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      margin-bottom: 20px;
-    }
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    .card-header h3 { font-size: 16px; color: #333; }
-
-    /* Tabela */
-    .table-wrap { overflow-x: auto; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    th {
-      text-align: left;
-      padding: 12px 8px;
-      border-bottom: 2px solid #e0e0e0;
-      color: #666;
-      font-weight: 600;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    td {
-      padding: 12px 8px;
-      border-bottom: 1px solid #f0f0f0;
-      color: #333;
-    }
-    tr:hover td { background: #f8f9ff; }
-    .license-key {
-      font-family: 'Courier New', monospace;
-      font-size: 12px;
-      background: #f5f5f5;
-      padding: 2px 6px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .license-key:hover { background: #e3f2fd; }
-
-    /* Badges */
-    .badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    .badge.active { background: #e8f5e9; color: #2e7d32; }
-    .badge.trial { background: #e3f2fd; color: #1565c0; }
-    .badge.expired { background: #ffebee; color: #c62828; }
-    .badge.inactive { background: #f5f5f5; color: #757575; }
-
-    /* Botões */
-    .btn {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .btn-primary { background: #1a237e; color: white; }
-    .btn-primary:hover { background: #283593; }
-    .btn-success { background: #2e7d32; color: white; }
-    .btn-success:hover { background: #388e3c; }
-    .btn-danger { background: #c62828; color: white; }
-    .btn-danger:hover { background: #d32f2f; }
-    .btn-warning { background: #e65100; color: white; }
-    .btn-warning:hover { background: #ef6c00; }
-    .btn-sm { padding: 5px 10px; font-size: 11px; }
-    .btn-outline {
-      background: transparent;
-      border: 1px solid #ddd;
-      color: #333;
-    }
-    .btn-outline:hover { background: #f5f5f5; }
-
-    .actions { display: flex; gap: 4px; flex-wrap: wrap; }
-
-    /* Modal */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-overlay.show { display: flex; }
-    .modal {
-      background: white;
-      border-radius: 12px;
-      padding: 28px;
-      width: 100%;
-      max-width: 480px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    }
-    .modal h3 { font-size: 18px; margin-bottom: 20px; color: #1a1a1a; }
-    .modal .form-group { margin-bottom: 14px; }
-    .modal .form-group label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 4px;
-    }
-    .modal .form-group input, .modal .form-group select {
-      width: 100%;
-      padding: 10px 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .modal .form-group input:focus { border-color: #1a237e; }
-    .modal .modal-actions {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      margin-top: 20px;
-    }
-
-    /* Search */
-    .search-box {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .search-box input {
-      padding: 8px 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 13px;
-      outline: none;
-      width: 240px;
-    }
-    .search-box input:focus { border-color: #1a237e; }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      color: white;
-      font-size: 14px;
-      font-weight: 600;
-      z-index: 2000;
-      display: none;
-      animation: slideIn 0.3s ease;
-    }
-    .toast.success { background: #2e7d32; }
-    .toast.error { background: #c62828; }
-    .toast.show { display: block; }
-    @keyframes slideIn {
-      from { transform: translateX(100px); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-
-    /* Loading */
-    .loading-spinner {
-      display: inline-block;
-      width: 16px; height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Config */
-    .config-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .config-item:last-child { border: none; }
-    .config-item .label { font-weight: 600; color: #333; font-size: 14px; }
-    .config-item .value { font-size: 13px; color: #666; font-family: monospace; }
-
-    .hidden { display: none !important; }
-    .page { display: none; }
-    .page.active { display: block; }
-
-    .empty-state {
-      text-align: center;
-      padding: 40px;
-      color: #999;
-    }
-    .empty-state p { font-size: 14px; }
-  </style>
+        /* Painel principal */
+        #mainPanel { display: none; }
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background: var(--primary);
+            color: white;
+            padding: 24px;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        .sidebar h2 { font-size: 20px; margin-bottom: 4px; }
+        .sidebar p { font-size: 12px; opacity: 0.7; }
+        .sidebar hr { border: none; border-top: 1px solid rgba(255,255,255,0.2); margin: 20px 0; }
+        .sidebar nav p {
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            opacity: 1;
+            background: rgba(255,255,255,0.1);
+        }
+        .main-content {
+            margin-left: 290px;
+            padding: 40px;
+            width: calc(100% - 290px);
+        }
+        .main-content h1 { font-size: 26px; color: #1a237e; margin-bottom: 24px; }
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .card-header h3 { font-size: 18px; color: #333; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+        .badge.active { background: #e8f5e9; color: #2e7d32; }
+        .badge.trial { background: #e3f2fd; color: #1565c0; }
+        .badge.expired { background: #ffebee; color: #c62828; }
+        .badge.inactive { background: #f5f5f5; color: #666; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            margin: 2px;
+        }
+        .btn-primary { background: #1a237e; color: white; }
+        .btn-success { background: #2e7d32; color: white; }
+        .btn-danger { background: #c62828; color: white; }
+        .btn-warning { background: #f57f17; color: white; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .stat-card .num { font-size: 32px; font-weight: 800; color: #1a237e; }
+        .stat-card .label { font-size: 12px; color: #666; margin-top: 4px; }
+        code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+        .empty-state { text-align: center; padding: 40px; color: #999; }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal h2 { margin-bottom: 20px; color: #1a237e; }
+        .modal .form-group { margin-bottom: 16px; }
+        .modal .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+        .modal .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+        .modal .form-group input:focus { border-color: #3949ab; }
+        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            margin-bottom: 16px;
+        }
+        .connection-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2e7d32;
+        }
+    </style>
 </head>
 <body>
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-logo">
-      <h1>🔬 PNCP Admin</h1>
-      <p>Gestão de Licenças v2.0</p>
+<!-- TELA DE CONFIGURAÇÃO INICIAL -->
+<div id="setupScreen">
+    <div class="card">
+        <h1>🔧 PNCP Admin</h1>
+        <p>Configure a URL da API de licenciamento</p>
+        
+        <label>URL da API</label>
+        <input type="url" id="apiUrlInput" placeholder="https://pncp-licencas-api.onrender.com/api" value="https://pncp-licencas-api.onrender.com/api">
+        
+        <label>Senha de Administrador</label>
+        <input type="password" id="adminKeyInput" placeholder="pncpAdmin2026!" value="pncpAdmin2026!">
+        
+        <button onclick="connect()">🔗 CONECTAR</button>
+        <div id="setupError"></div>
     </div>
-    <nav>
-      <a class="active" onclick="showPage('dashboard')" data-page="dashboard">📊 Dashboard</a>
-      <a onclick="showPage('usuarios')" data-page="usuarios">👥 Usuários</a>
-      <a onclick="showPage('config')" data-page="config">⚙️ Configurações</a>
-    </nav>
-    <div class="sidebar-footer">
-      PNCP Monitor — Décio Camargo
+</div>
+
+<!-- PAINEL PRINCIPAL -->
+<div id="mainPanel">
+    <div class="sidebar">
+        <h2>🔬 PNCP Admin</h2>
+        <p>v2.0.0 — Gestão de Licenças</p>
+        <hr>
+        <nav>
+            <p>📊 Dashboard</p>
+        </nav>
     </div>
-  </aside>
+    <div class="main-content">
+        <h1>Gestão de Usuários</h1>
 
-  <!-- Main -->
-  <main class="main">
+        <div class="connection-status" id="connStatus">
+            <span class="dot"></span>
+            <span id="connUrl">Conectado</span>
+        </div>
 
-    <!-- Page: Dashboard -->
-    <div id="page-dashboard" class="page active">
-      <div class="page-header">
-        <div>
-          <h2>📊 Dashboard</h2>
-          <p>Resumo do sistema de licenciamento</p>
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card"><div class="num" id="statTotal">0</div><div class="label">Total</div></div>
+            <div class="stat-card"><div class="num" id="statActive">0</div><div class="label">Ativos</div></div>
+            <div class="stat-card"><div class="num" id="statTrial">0</div><div class="label">Trial</div></div>
+            <div class="stat-card"><div class="num" id="statExpired">0</div><div class="label">Expirados</div></div>
         </div>
-      </div>
 
-      <div class="stats-grid" id="statsGrid">
-        <div class="stat-card total">
-          <div class="number" id="statTotal">-</div>
-          <div class="label">Total de Usuários</div>
-        </div>
-        <div class="stat-card active">
-          <div class="number" id="statActive">-</div>
-          <div class="label">✅ Ativos</div>
-        </div>
-        <div class="stat-card trial">
-          <div class="number" id="statTrial">-</div>
-          <div class="label">🎁 Trial</div>
-        </div>
-        <div class="stat-card expired">
-          <div class="number" id="statExpired">-</div>
-          <div class="label">❌ Expirados</div>
-        </div>
-        <div class="stat-card inactive">
-          <div class="number" id="statInactive">-</div>
-          <div class="label">⛔ Inativos</div>
-        </div>
-      </div>
+        <div class="card">
+            <div class="card-header">
+                <h3>Usuários Cadastrados</h3>
+                <button class="btn btn-primary" onclick="abrirModalNovo()">+ Novo Usuário</button>
+            </div>
 
-      <div class="card">
-        <div class="card-header">
-          <h3>Últimos Usuários</h3>
+            <div id="userTableContainer">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuário</th>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Chave</th>
+                            <th>Status</th>
+                            <th>Trial até</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userList"></tbody>
+                </table>
+            </div>
+            <div class="empty-state" id="emptyState">Nenhum usuário cadastrado ainda.</div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Usuário</th>
-                <th>Nome</th>
-                <th>Status</th>
-                <th>Licença</th>
-                <th>Cadastro</th>
-              </tr>
-            </thead>
-            <tbody id="dashboardTable"></tbody>
-          </table>
-        </div>
-      </div>
     </div>
+</div>
 
-    <!-- Page: Usuários -->
-    <div id="page-usuarios" class="page">
-      <div class="page-header">
-        <div>
-          <h2>👥 Usuários</h2>
-          <p>Gerencie licenças e acessos</p>
-        </div>
-        <button class="btn btn-primary" onclick="openModal('novo')">+ Novo Usuário</button>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <h3>Todos os Usuários</h3>
-          <div class="search-box">
-            <input type="text" id="searchUser" placeholder="Buscar por usuário ou nome..." oninput="filterUsers()">
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Usuário</th>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Chave de Licença</th>
-                <th>Status</th>
-                <th>Trial até</th>
-                <th>Cadastro</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="usersTable"></tbody>
-          </table>
-        </div>
-        <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#666;">
-          <span id="paginationInfo">Mostrando 1-20 de 0</span>
-          <div style="display:flex;gap:4px;">
-            <button class="btn btn-outline btn-sm" onclick="prevPage()">← Anterior</button>
-            <button class="btn btn-outline btn-sm" onclick="nextPage()">Próxima →</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Page: Config -->
-    <div id="page-config" class="page">
-      <div class="page-header">
-        <div>
-          <h2>⚙️ Configurações</h2>
-          <p>Informações do servidor</p>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 style="margin-bottom:16px;">Servidor</h3>
-        <div class="config-item">
-          <span class="label">URL da API</span>
-          <span class="value" id="configApiUrl">https://seu-servidor.onrender.com/api</span>
-        </div>
-        <div class="config-item">
-          <span class="label">Chave de Admin</span>
-          <span class="value" style="cursor:pointer;" onclick="copyText('pncpAdmin2026!')">pncpAdmin2026! 📋</span>
-        </div>
-        <div class="config-item">
-          <span class="label">Status do Servidor</span>
-          <span class="value" id="serverStatus">Verificando...</span>
-        </div>
-        <div class="config-item">
-          <span class="label">Modelo de Negócio</span>
-          <span class="value">7 dias grátis → R$ 49,90/mês</span>
-        </div>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- Modal -->
-  <div class="modal-overlay" id="modalOverlay">
+<!-- MODAL NOVO USUÁRIO -->
+<div class="modal-overlay" id="modalNovo">
     <div class="modal">
-      <h3 id="modalTitle">Novo Usuário</h3>
-      <form id="modalForm" onsubmit="return false;">
+        <h2>+ Novo Usuário</h2>
         <div class="form-group">
-          <label>Usuário *</label>
-          <input type="text" id="fUsername" required>
+            <label>Usuário *</label>
+            <input type="text" id="newUsername" placeholder="Ex: admin">
         </div>
         <div class="form-group">
-          <label>Senha *</label>
-          <input type="password" id="fPassword" required>
+            <label>Senha *</label>
+            <input type="password" id="newPassword" placeholder="Mínimo 6 caracteres">
         </div>
         <div class="form-group">
-          <label>Nome *</label>
-          <input type="text" id="fNome" required>
+            <label>Nome *</label>
+            <input type="text" id="newNome" placeholder="Nome completo">
         </div>
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="fEmail">
+            <label>Email</label>
+            <input type="email" id="newEmail" placeholder="email@exemplo.com">
         </div>
         <div class="modal-actions">
-          <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-          <button class="btn btn-primary" onclick="salvarUsuario()" id="btnSalvar">Cadastrar</button>
+            <button class="btn btn-primary" onclick="cadastrar()">Cadastrar</button>
+            <button class="btn" style="background:#eee;color:#333;" onclick="fecharModal('modalNovo')">Cancelar</button>
         </div>
-      </form>
+        <div id="modalError" style="color:#c62828;font-size:13px;margin-top:12px;display:none;"></div>
     </div>
-  </div>
+</div>
 
-  <!-- Toast -->
-  <div class="toast" id="toast"></div>
+<script>
+    let API_URL = '';
+    let ADMIN_KEY = '';
 
-  <script>
-    // ========== CONFIG ==========
-    const API_URL = prompt('Digite a URL da API (ex: https://pncp-licencas-api.onrender.com/api):', 'https://seu-servidor.onrender.com/api') || 'https://seu-servidor.onrender.com/api';
-    const ADMIN_KEY = 'pncpAdmin2026!';
+    function connect() {
+        const urlInput = document.getElementById('apiUrlInput').value.trim();
+        const keyInput = document.getElementById('adminKeyInput').value.trim();
+        const errorDiv = document.getElementById('setupError');
 
-    // ========== STATE ==========
-    let allUsers = [];
-    let currentPage = 1;
-    const PER_PAGE = 20;
+        if (!urlInput) {
+            errorDiv.textContent = 'Digite a URL da API.';
+            errorDiv.style.display = 'block';
+            return;
+        }
 
-    // ========== TOAST ==========
-    function showToast(msg, type = 'success') {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.className = 'toast ' + type + ' show';
-      setTimeout(() => t.classList.remove('show'), 3000);
+        API_URL = urlInput.replace(/\/+$/, '');
+        ADMIN_KEY = keyInput || 'pncpAdmin2026!';
+
+        // Testa conexão
+        fetch(API_URL + '/health')
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    document.getElementById('setupScreen').style.display = 'none';
+                    document.getElementById('mainPanel').style.display = 'block';
+                    document.getElementById('connUrl').textContent = 'Conectado a ' + API_URL;
+                    carregarDados();
+                } else {
+                    throw new Error('Resposta inesperada');
+                }
+            })
+            .catch(err => {
+                errorDiv.textContent = 'Erro ao conectar: ' + err.message + '. Verifique a URL.';
+                errorDiv.style.display = 'block';
+            });
     }
 
-    // ========== COPY ==========
-    function copyText(text) {
-      navigator.clipboard.writeText(text).then(() => showToast('Copiado!'));
+    async function apiFetch(path, options = {}) {
+        const res = await fetch(API_URL + path, {
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-admin-key': ADMIN_KEY,
+                ...options.headers 
+            },
+            ...options
+        });
+        return res.json();
     }
 
-    // ========== PAGES ==========
-    function showPage(name) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.getElementById('page-' + name).classList.add('active');
-      document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
-      document.querySelector(`.sidebar nav a[data-page="${name}"]`).classList.add('active');
-      if (name === 'dashboard') loadDashboard();
-      if (name === 'usuarios') loadUsers();
-      if (name === 'config') checkServer();
+    async function carregarDados() {
+        await Promise.all([carregarUsers(), carregarStats()]);
     }
 
-    // ========== DASHBOARD ==========
-    async function loadDashboard() {
-      try {
-        const res = await fetch(`${API_URL}/stats`, { headers: { 'x-admin-key': ADMIN_KEY } });
-        const data = await res.json();
+    async function carregarUsers() {
+        const data = await apiFetch('/users');
+        const list = document.getElementById('userList');
+        const empty = document.getElementById('emptyState');
+
+        if (!data.success || !data.users || data.users.length === 0) {
+            list.innerHTML = '';
+            empty.style.display = 'block';
+            return;
+        }
+
+        empty.style.display = 'none';
+        list.innerHTML = data.users.map(u => {
+            const trialDate = u.trialEndsAt ? new Date(u.trialEndsAt).toLocaleDateString('pt-BR') : '-';
+            return `<tr>
+                <td><strong>${u.username}</strong></td>
+                <td>${u.nome}</td>
+                <td>${u.email || '-'}</td>
+                <td><code>${u.licenseKey}</code></td>
+                <td><span class="badge ${u.status}">${(u.status || 'desconhecido').toUpperCase()}</span></td>
+                <td style="font-size:12px">${trialDate}</td>
+                <td>
+                    ${u.status === 'trial' ? `<button class="btn btn-success btn-sm" onclick="ativar('${u.username}')">Ativar</button>` : ''}
+                    ${u.status === 'active' || u.status === 'inactive' ? `<button class="btn btn-warning btn-sm" onclick="estenderTrial('${u.username}')">+ Trial</button>` : ''}
+                    <button class="btn btn-danger btn-sm" onclick="confirmarDelete('${u.username}')">Excluir</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function carregarStats() {
+        const data = await apiFetch('/stats');
+        if (data.success && data.stats) {
+            document.getElementById('statTotal').textContent = data.stats.total || 0;
+            document.getElementById('statActive').textContent = data.stats.active || 0;
+            document.getElementById('statTrial').textContent = data.stats.trial || 0;
+            document.getElementById('statExpired').textContent = data.stats.expired || 0;
+        }
+    }
+
+    function abrirModalNovo() {
+        document.getElementById('modalNovo').classList.add('active');
+        document.getElementById('modalError').style.display = 'none';
+    }
+
+    function fecharModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    async function cadastrar() {
+        const username = document.getElementById('newUsername').value.trim();
+        const password = document.getElementById('newPassword').value;
+        const nome = document.getElementById('newNome').value.trim();
+        const email = document.getElementById('newEmail').value.trim();
+        const errorDiv = document.getElementById('modalError');
+
+        if (!username || !password || !nome) {
+            errorDiv.textContent = 'Preencha Usuário, Senha e Nome.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        if (password.length < 6) {
+            errorDiv.textContent = 'Senha deve ter no mínimo 6 caracteres.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        const data = await apiFetch('/register', {
+            method: 'POST',
+            body: JSON.stringify({ username, password, nome, email })
+        });
+
         if (data.success) {
-          document.getElementById('statTotal').textContent = data.stats.total;
-          document.getElementById('statActive').textContent = data.stats.active;
-          document.getElementById('statTrial').textContent = data.stats.trial;
-          document.getElementById('statExpired').textContent = data.stats.expired;
-          document.getElementById('statInactive').textContent = data.stats.inactive;
+            alert('✅ Usuário cadastrado!\n\nChave de Licença: ' + data.licenseKey + '\n\nCopie esta chave para usar no login do app.');
+            fecharModal('modalNovo');
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('newNome').value = '';
+            document.getElementById('newEmail').value = '';
+            await carregarDados();
+        } else {
+            errorDiv.textContent = data.error || 'Erro ao cadastrar.';
+            errorDiv.style.display = 'block';
         }
-
-        const res2 = await fetch(`${API_URL}/users`, { headers: { 'x-admin-key': ADMIN_KEY } });
-        const data2 = await res2.json();
-        if (data2.success) {
-          const recent = data2.users.slice(0, 10);
-          document.getElementById('dashboardTable').innerHTML = recent.map(u => `
-            <tr>
-              <td><strong>${u.username}</strong></td>
-              <td>${u.nome}</td>
-              <td><span class="badge ${u.status}">${u.status}</span></td>
-              <td><span class="license-key" onclick="copyText('${u.licenseKey}')">${u.licenseKey.substring(0, 8)}... 📋</span></td>
-              <td>${new Date(u.createdAt).toLocaleDateString('pt-BR')}</td>
-            </tr>
-          `).join('');
-        }
-      } catch (e) {
-        showToast('Erro ao carregar dashboard', 'error');
-      }
     }
 
-    // ========== USERS ==========
-    async function loadUsers() {
-      try {
-        const res = await fetch(`${API_URL}/users`, { headers: { 'x-admin-key': ADMIN_KEY } });
-        const data = await res.json();
-        if (data.success) {
-          allUsers = data.users;
-          renderUsers();
-        }
-      } catch (e) {
-        showToast('Erro ao carregar usuários', 'error');
-      }
-    }
-
-    function filterUsers() {
-      currentPage = 1;
-      renderUsers();
-    }
-
-    function renderUsers() {
-      const search = document.getElementById('searchUser').value.toLowerCase();
-      let filtered = allUsers.filter(u =>
-        u.username.toLowerCase().includes(search) ||
-        u.nome.toLowerCase().includes(search)
-      );
-
-      const total = filtered.length;
-      const start = (currentPage - 1) * PER_PAGE;
-      const end = start + PER_PAGE;
-      const page = filtered.slice(start, end);
-
-      document.getElementById('paginationInfo').textContent =
-        `Mostrando ${total > 0 ? start + 1 : 0}-${Math.min(end, total)} de ${total}`;
-
-      document.getElementById('usersTable').innerHTML = page.length === 0
-        ? '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;">Nenhum usuário encontrado</td></tr>'
-        : page.map(u => `
-          <tr>
-            <td><strong>${u.username}</strong></td>
-            <td>${u.nome}</td>
-            <td>${u.email || '-'}</td>
-            <td><span class="license-key" onclick="copyText('${u.licenseKey}')">${u.licenseKey.substring(0, 12)}... 📋</span></td>
-            <td><span class="badge ${u.status}">${u.status}</span></td>
-            <td>${u.trialEndsAt ? new Date(u.trialEndsAt).toLocaleDateString('pt-BR') : '-'}</td>
-            <td>${new Date(u.createdAt).toLocaleDateString('pt-BR')}</td>
-            <td>
-              <div class="actions">
-                ${u.status !== 'active' ? `<button class="btn btn-success btn-sm" onclick="ativar('${u.username}')">Ativar</button>` : ''}
-                ${u.status !== 'inactive' ? `<button class="btn btn-warning btn-sm" onclick="desativar('${u.username}')">Desativar</button>` : ''}
-                <button class="btn btn-outline btn-sm" onclick="regenerarChave('${u.username}')">Nova Chave</button>
-                <button class="btn btn-outline btn-sm" onclick="estenderTrial('${u.username}')">+7 dias</button>
-                <button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.username}')">Excluir</button>
-              </div>
-            </td>
-          </tr>
-        `).join('');
-    }
-
-    function nextPage() {
-      const total = allUsers.filter(u =>
-        u.username.toLowerCase().includes(document.getElementById('searchUser').value.toLowerCase()) ||
-        u.nome.toLowerCase().includes(document.getElementById('searchUser').value.toLowerCase())
-      ).length;
-      if (currentPage * PER_PAGE &lt; total) { currentPage++; renderUsers(); }
-    }
-
-    function prevPage() {
-      if (currentPage > 1) { currentPage--; renderUsers(); }
-    }
-
-    // ========== USER ACTIONS ==========
     async function ativar(username) {
-      await fetch(`${API_URL}/users/activate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
-        body: JSON.stringify({ username })
-      });
-      showToast(`✅ ${username} ativado!`);
-      loadUsers();
-    }
-
-    async function desativar(username) {
-      await fetch(`${API_URL}/users/deactivate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
-        body: JSON.stringify({ username })
-      });
-      showToast(`⛔ ${username} desativado!`);
-      loadUsers();
-    }
-
-    async function regenerarChave(username) {
-      if (!confirm(`Gerar nova chave para ${username}?`)) return;
-      const res = await fetch(`${API_URL}/users/regenerate-key`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
-        body: JSON.stringify({ username })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast(`🔑 Nova chave: ${data.licenseKey.substring(0, 8)}...`);
-        loadUsers();
-      }
+        const data = await apiFetch('/users/activate', {
+            method: 'POST',
+            body: JSON.stringify({ username })
+        });
+        if (data.success) await carregarDados();
+        else alert('Erro: ' + (data.error || 'desconhecido'));
     }
 
     async function estenderTrial(username) {
-      const res = await fetch(`${API_URL}/users/extend-trial`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
-        body: JSON.stringify({ username, days: 7 })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast(`🎁 Trial estendido até ${new Date(data.trialEndsAt).toLocaleDateString('pt-BR')}`);
-        loadUsers();
-      }
-    }
-
-    async function deletarUsuario(username) {
-      if (!confirm(`⚠️ Excluir ${username} permanentemente?`)) return;
-      if (!confirm(`Tem certeza? Essa ação não pode ser desfeita.`)) return;
-      await fetch(`${API_URL}/users/delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
-        body: JSON.stringify({ username })
-      });
-      showToast(`🗑️ ${username} excluído!`);
-      loadUsers();
-    }
-
-    // ========== MODAL ==========
-    function openModal() {
-      document.getElementById('modalOverlay').classList.add('show');
-      document.getElementById('modalForm').reset();
-      document.getElementById('modalTitle').textContent = 'Novo Usuário';
-      document.getElementById('btnSalvar').textContent = 'Cadastrar';
-    }
-
-    function closeModal() {
-      document.getElementById('modalOverlay').classList.remove('show');
-    }
-
-    async function salvarUsuario() {
-      const username = document.getElementById('fUsername').value.trim();
-      const password = document.getElementById('fPassword').value;
-      const nome = document.getElementById('fNome').value.trim();
-      const email = document.getElementById('fEmail').value.trim();
-
-      if (!username || !password || !nome) {
-        showToast('Preencha os campos obrigatórios (*)', 'error');
-        return;
-      }
-
-      document.getElementById('btnSalvar').disabled = true;
-      document.getElementById('btnSalvar').innerHTML = '<span class="loading-spinner"></span>';
-
-      try {
-        const res = await fetch(`${API_URL}/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, nome, email })
+        const dias = prompt('Quantos dias para estender o trial?', '7');
+        if (!dias || isNaN(dias) || parseInt(dias) <= 0) return;
+        
+        const data = await apiFetch('/users/extend-trial', {
+            method: 'POST',
+            body: JSON.stringify({ username, days: parseInt(dias) })
         });
-        const data = await res.json();
+        if (data.success) await carregarDados();
+        else alert('Erro: ' + (data.error || 'desconhecido'));
+    }
 
-        if (data.success) {
-          showToast(`✅ ${username} cadastrado! Chave: ${data.user.licenseKey.substring(0, 8)}...`);
-          closeModal();
-          loadUsers();
-          loadDashboard();
-        } else {
-          showToast(data.error, 'error');
+    function confirmarDelete(username) {
+        if (confirm('Tem certeza que deseja EXCLUIR o usuário "' + username + '"?')) {
+            deletar(username);
         }
-      } catch (e) {
-        showToast('Erro ao cadastrar', 'error');
-      }
-
-      document.getElementById('btnSalvar').disabled = false;
-      document.getElementById('btnSalvar').textContent = 'Cadastrar';
     }
 
-    // ========== CONFIG ==========
-    async function checkServer() {
-      document.getElementById('configApiUrl').textContent = API_URL;
-      try {
-        const res = await fetch(`${API_URL}/health`);
-        const data = await res.json();
-        document.getElementById('serverStatus').innerHTML = '✅ Online';
-      } catch (e) {
-        document.getElementById('serverStatus').innerHTML = '❌ Offline';
-      }
+    async function deletar(username) {
+        const data = await apiFetch('/users/delete', {
+            method: 'POST',
+            body: JSON.stringify({ username })
+        });
+        if (data.success) await carregarDados();
+        else alert('Erro: ' + (data.error || 'desconhecido'));
     }
 
-    // ========== INIT ==========
-    loadDashboard();
-  </script>
+    // Fecha modal ao clicar fora
+    document.getElementById('modalNovo').addEventListener('click', function(e) {
+        if (e.target === this) fecharModal('modalNovo');
+    });
+
+    // Enter no campo de URL conecta
+    document.getElementById('apiUrlInput').addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') connect();
+    });
+    document.getElementById('adminKeyInput').addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') connect();
+    });
+</script>
 </body>
 </html>

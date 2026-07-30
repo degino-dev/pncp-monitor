@@ -1,71 +1,43 @@
 const express = require('express');
-const initSqlJs = require('sql.js');
 const bcrypt = require('bcryptjs');
+const { MongoClient, ServerApiVersion } = require('mongodb');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = "pncpAdmin2026!";
-const DB_PATH = '/tmp/licencas.db';
+
+// =========================================================
+// CONEXÃO MONGODB ATLAS
+// =========================================================
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://walteremanuel_db_user:oEY8KMaKvhIZEljT@cluster0.fsea6qz.mongodb.net/?appName=Cluster0";
+const DB_NAME = "pncp_monitor";
+
+let db;
+let client;
+
+async function conectarMongo() {
+  client = new MongoClient(MONGO_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
+  });
+  await client.connect();
+  db = client.db(DB_NAME);
+  
+  // Cria índices para buscar mais rápido
+  await db.collection('usuarios').createIndex({ username: 1 }, { unique: true });
+  await db.collection('usuarios').createIndex({ licenseKey: 1 }, { unique: true });
+  
+  console.log('✅ Conectado ao MongoDB Atlas!');
+}
+
 app.use(cors());
 app.use(express.json());
-let db;
-async function initDatabase() {
-  const SQL = await initSqlJs();
-  try {
-    if (fs.existsSync(DB_PATH)) {
-      const buffer = fs.readFileSync(DB_PATH);
-      db = new SQL.Database(buffer);
-    } else {
-      db = new SQL.Database();
-    }
-  } catch (e) {
-    db = new SQL.Database();
-  }
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      nome TEXT NOT NULL,
-      email TEXT DEFAULT '',
-      licenseKey TEXT UNIQUE NOT NULL,
-      status TEXT DEFAULT 'trial',
-      trialEndsAt TEXT,
-      createdAt TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  salvarDB();
-}
-function salvarDB() {
-  try {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(DB_PATH, buffer);
-  } catch (e) {
-    console.error('Erro ao salvar DB:', e.message);
-  }
-}
-function query(sql, params = []) {
-  const stmt = db.prepare(sql);
-  if (params.length > 0) stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject());
-  }
-  stmt.free();
-  return rows;
-}
-function queryOne(sql, params = []) {
-  const rows = query(sql, params);
-  return rows.length > 0 ? rows[0] : null;
-}
-function execute(sql, params = []) {
-  db.run(sql, params);
-  salvarDB();
-}
+
+// === MIDDLEWARE ADMIN ===
 function authAdmin(req, res, next) {
   const key = req.headers['x-admin-key'];
   if (key !== ADMIN_KEY) return res.status(401).json({ success: false, error: "Acesso negado" });
@@ -74,49 +46,61 @@ function authAdmin(req, res, next) {
 
 // === ENDPOINTS PÚBLICOS ===
 
+// CADASTRO
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password, nome, email } = req.body;
     if (!username || !password || !nome) {
       return res.json({ success: false, error: "Campos obrigatorios: username, password, nome" });
     }
+
+    // Verifica se já existe
+    const existente = await db.collection('usuarios').findOne({ username });
+    if (existente) {
+      return res.json({ success: false, error: "Usuario ja existe." });
+    }
+
     const hash = bcrypt.hashSync(password, 10);
     const licenseKey = uuidv4();
     const trialEnds = new Date();
     trialEnds.setDate(trialEnds.getDate() + 7);
-    execute(
-      'INSERT INTO users (username, password, nome, email, licenseKey, status, trialEndsAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [username, hash, nome, email || '', licenseKey, 'trial', trialEnds.toISOString()]
-    );
+
+    await db.collection('usuarios').insertOne({
+      username,
+      password: hash,
+      nome,
+      email: email || '',
+      licenseKey,
+      status: 'trial',
+      trialEndsAt: trialEnds.toISOString(),
+      createdAt: new Date().toISOString()
+    });
+
     res.json({
       success: true,
       user: { username, nome, email: email || '', licenseKey, status: 'trial', trialEndsAt: trialEnds.toISOString() }
     });
   } catch (e) {
-    if (e.message && e.message.includes('UNIQUE')) {
-      return res.json({ success: false, error: "Usuario ja existe." });
-    }
     res.json({ success: false, error: "Erro ao cadastrar: " + (e.message || e) });
   }
 });
 
-// =========================================================
-// MODIFICADO: Login ACEITA apenas usuário e senha
-// A validação de licenseKey foi REMOVIDA
-// =========================================================
-app.post('/api/login', (req, res) => {
+// LOGIN
+app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const user = queryOne('SELECT * FROM users WHERE username = ?', [username]);
+    const user = await db.collection('usuarios').findOne({ username });
+    
     if (!user) return res.json({ success: false, error: "Usuario nao encontrado." });
     if (!bcrypt.compareSync(password, user.password)) {
       return res.json({ success: false, error: "Senha incorreta." });
     }
+
     const agora = new Date();
     if (user.status === 'trial') {
       const trialEnd = new Date(user.trialEndsAt);
       if (agora > trialEnd) {
-        execute('UPDATE users SET status = ? WHERE id = ?', ['expired', user.id]);
+        await db.collection('usuarios').updateOne({ username }, { $set: { status: 'expired' } });
         return res.json({ success: false, error: "Periodo de teste expirou (7 dias). Renove sua licenca." });
       }
     }
@@ -126,6 +110,7 @@ app.post('/api/login', (req, res) => {
     if (user.status === 'inactive') {
       return res.json({ success: false, error: "Licenca desativada. Contate o administrador." });
     }
+
     res.json({
       success: true,
       user: {
@@ -142,19 +127,21 @@ app.post('/api/login', (req, res) => {
   }
 });
 
-app.get('/api/validate-key', (req, res) => {
+// VALIDAR CHAVE
+app.get('/api/validate-key', async (req, res) => {
   try {
     const { key } = req.query;
-    const user = queryOne('SELECT username, status, trialEndsAt FROM users WHERE licenseKey = ?', [key]);
+    const user = await db.collection('usuarios').findOne({ licenseKey: key });
+    
     if (!user) return res.json({ success: false, error: "Chave invalida." });
     if (user.status === 'trial' && new Date() > new Date(user.trialEndsAt)) {
-      execute('UPDATE users SET status = ? WHERE licenseKey = ?', ['expired', key]);
+      await db.collection('usuarios').updateOne({ licenseKey: key }, { $set: { status: 'expired' } });
       return res.json({ success: false, error: "Trial expirado." });
     }
     if (user.status !== 'active' && user.status !== 'trial') {
       return res.json({ success: false, error: "Licenca nao esta ativa." });
     }
-    res.json({ success: true, user });
+    res.json({ success: true, user: { username: user.username, status: user.status, trialEndsAt: user.trialEndsAt } });
   } catch (e) {
     res.json({ success: false, error: "Erro interno" });
   }
@@ -162,61 +149,70 @@ app.get('/api/validate-key', (req, res) => {
 
 // === ENDPOINTS ADMIN ===
 
-app.get('/api/users', authAdmin, (req, res) => {
+app.get('/api/users', authAdmin, async (req, res) => {
   try {
-    const users = query('SELECT id, username, nome, email, licenseKey, status, trialEndsAt, createdAt FROM users ORDER BY createdAt DESC');
+    const users = await db.collection('usuarios')
+      .find({}, { projection: { password: 0 } })
+      .sort({ createdAt: -1 })
+      .toArray();
     res.json({ success: true, users });
   } catch (e) {
     res.json({ success: false, error: "Erro ao listar usuarios" });
   }
 });
 
-app.post('/api/users/activate', authAdmin, (req, res) => {
-  execute('UPDATE users SET status = ?, trialEndsAt = NULL WHERE username = ?', ['active', req.body.username]);
+app.post('/api/users/activate', authAdmin, async (req, res) => {
+  await db.collection('usuarios').updateOne(
+    { username: req.body.username },
+    { $set: { status: 'active', trialEndsAt: null } }
+  );
   res.json({ success: true });
 });
 
-app.post('/api/users/deactivate', authAdmin, (req, res) => {
-  execute('UPDATE users SET status = ? WHERE username = ?', ['inactive', req.body.username]);
+app.post('/api/users/deactivate', authAdmin, async (req, res) => {
+  await db.collection('usuarios').updateOne(
+    { username: req.body.username },
+    { $set: { status: 'inactive' } }
+  );
   res.json({ success: true });
 });
 
-app.post('/api/users/delete', authAdmin, (req, res) => {
-  execute('DELETE FROM users WHERE username = ?', [req.body.username]);
+app.post('/api/users/delete', authAdmin, async (req, res) => {
+  await db.collection('usuarios').deleteOne({ username: req.body.username });
   res.json({ success: true });
 });
 
-app.post('/api/users/regenerate-key', authAdmin, (req, res) => {
+app.post('/api/users/regenerate-key', authAdmin, async (req, res) => {
   const newKey = uuidv4();
-  execute('UPDATE users SET licenseKey = ? WHERE username = ?', [newKey, req.body.username]);
+  await db.collection('usuarios').updateOne(
+    { username: req.body.username },
+    { $set: { licenseKey: newKey } }
+  );
   res.json({ success: true, licenseKey: newKey });
 });
 
-app.post('/api/users/extend-trial', authAdmin, (req, res) => {
+app.post('/api/users/extend-trial', authAdmin, async (req, res) => {
   const { username, days = 7 } = req.body;
-  const user = queryOne('SELECT trialEndsAt FROM users WHERE username = ?', [username]);
+  const user = await db.collection('usuarios').findOne({ username });
   const baseDate = user && user.trialEndsAt ? new Date(user.trialEndsAt) : new Date();
   baseDate.setDate(baseDate.getDate() + days);
-  execute('UPDATE users SET trialEndsAt = ?, status = ? WHERE username = ?', [baseDate.toISOString(), 'trial', username]);
+  await db.collection('usuarios').updateOne(
+    { username },
+    { $set: { trialEndsAt: baseDate.toISOString(), status: 'trial' } }
+  );
   res.json({ success: true, trialEndsAt: baseDate.toISOString() });
 });
 
-app.get('/api/stats', authAdmin, (req, res) => {
+app.get('/api/stats', authAdmin, async (req, res) => {
   try {
-    const total = queryOne('SELECT COUNT(*) as count FROM users');
-    const active = queryOne('SELECT COUNT(*) as count FROM users WHERE status = ?', ['active']);
-    const trial = queryOne('SELECT COUNT(*) as count FROM users WHERE status = ?', ['trial']);
-    const expired = queryOne('SELECT COUNT(*) as count FROM users WHERE status = ?', ['expired']);
-    const inactive = queryOne('SELECT COUNT(*) as count FROM users WHERE status = ?', ['inactive']);
+    const total = await db.collection('usuarios').countDocuments();
+    const active = await db.collection('usuarios').countDocuments({ status: 'active' });
+    const trial = await db.collection('usuarios').countDocuments({ status: 'trial' });
+    const expired = await db.collection('usuarios').countDocuments({ status: 'expired' });
+    const inactive = await db.collection('usuarios').countDocuments({ status: 'inactive' });
     res.json({
       success: true,
-      stats: {
-        total: total.count,
-        active: active.count,
-        trial: trial.count,
-        expired: expired.count,
-        inactive: inactive.count
-      }
+      stats: { total, active, trial, expired, inactive }
     });
   } catch (e) {
     res.json({ success: false, error: "Erro ao obter estatisticas" });
@@ -227,12 +223,13 @@ app.get('/api/health', (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-initDatabase().then(() => {
+// INICIALIZA
+conectarMongo().then(() => {
   app.listen(PORT, () => {
-    console.log('PNCP Licencas API rodando na porta ' + PORT);
-    console.log('Admin Key: pncpAdmin2026!');
+    console.log('🚀 PNCP Licencas API rodando na porta ' + PORT);
+    console.log('📦 Banco: MongoDB Atlas');
+    console.log('🔑 Admin Key: pncpAdmin2026!');
   });
 }).catch(err => {
-  console.error('Erro ao inicializar banco:', err);
-  process.exit(1);
-});
+  console.error('❌ Erro ao conectar no MongoDB:', err);
+  

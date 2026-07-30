@@ -24,7 +24,8 @@ async function conectarMongo() {
       deprecationErrors: true,
     },
     tls: true,
-    tlsInsecure: true
+    tlsAllowInvalidCertificates: true,
+    tlsAllowInvalidHostnames: true
   });
   
   await client.connect();

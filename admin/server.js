@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { MongoClient, ServerApiVersion } = require('mongodb').MongoClient;
+const { MongoClient, ServerApiVersion } = require('mongodb');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const app = express();
@@ -17,11 +17,7 @@ let db;
 let client;
 
 async function conectarMongo() {
-  client = new MongoClient(MONGO_URI, {
-    connectTimeoutMS: 30000,
-    socketTimeoutMS: 30000,
-    serverSelectionTimeoutMS: 30000
-  });
+  client = new MongoClient(MONGO_URI);
   
   await client.connect();
   db = client.db(DB_NAME);

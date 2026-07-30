@@ -22,8 +22,11 @@ async function conectarMongo() {
       version: ServerApiVersion.v1,
       strict: true,
       deprecationErrors: true,
-    }
+    },
+    tls: true,
+    tlsInsecure: true
   });
+  
   await client.connect();
   db = client.db(DB_NAME);
   

@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion } = require('mongodb').MongoClient;
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const app = express();
@@ -10,7 +10,7 @@ const ADMIN_KEY = "pncpAdmin2026!";
 // =========================================================
 // CONEXÃO MONGODB ATLAS
 // =========================================================
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://walteremanuel_db_user:oEY8KMaKvhIZEljT@cluster0.fsea6qz.mongodb.net/?appName=Cluster0";
+const MONGO_URI = process.env.MONGO_URI || "mongodb://walteremanuel_db_user:oEY8KMaKvhIZEljT@ac-lw4fvfw-shard-00-00.fsea6qz.mongodb.net:27017,ac-lw4fvfw-shard-00-01.fsea6qz.mongodb.net:27017,ac-lw4fvfw-shard-00-02.fsea6qz.mongodb.net:27017/pncp_monitor?ssl=true&sslInvalidHostNameAllowed=true&replicaSet=atlas-k8u0k2-shard-0&retryWrites=true&w=majority";
 const DB_NAME = "pncp_monitor";
 
 let db;
@@ -18,14 +18,9 @@ let client;
 
 async function conectarMongo() {
   client = new MongoClient(MONGO_URI, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true,
-    },
-    tls: true,
-    tlsAllowInvalidCertificates: true,
-    tlsAllowInvalidHostnames: true
+    connectTimeoutMS: 30000,
+    socketTimeoutMS: 30000,
+    serverSelectionTimeoutMS: 30000
   });
   
   await client.connect();

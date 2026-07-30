@@ -27,17 +27,15 @@ async function conectarMongo() {
   await client.connect();
   db = client.db(DB_NAME);
   
-  // Cria índices para buscar mais rápido
   await db.collection('usuarios').createIndex({ username: 1 }, { unique: true });
   await db.collection('usuarios').createIndex({ licenseKey: 1 }, { unique: true });
   
-  console.log('✅ Conectado ao MongoDB Atlas!');
+  console.log('Conectado ao MongoDB Atlas!');
 }
 
 app.use(cors());
 app.use(express.json());
 
-// === MIDDLEWARE ADMIN ===
 function authAdmin(req, res, next) {
   const key = req.headers['x-admin-key'];
   if (key !== ADMIN_KEY) return res.status(401).json({ success: false, error: "Acesso negado" });
@@ -46,25 +44,20 @@ function authAdmin(req, res, next) {
 
 // === ENDPOINTS PÚBLICOS ===
 
-// CADASTRO
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password, nome, email } = req.body;
     if (!username || !password || !nome) {
       return res.json({ success: false, error: "Campos obrigatorios: username, password, nome" });
     }
-
-    // Verifica se já existe
     const existente = await db.collection('usuarios').findOne({ username });
     if (existente) {
       return res.json({ success: false, error: "Usuario ja existe." });
     }
-
     const hash = bcrypt.hashSync(password, 10);
     const licenseKey = uuidv4();
     const trialEnds = new Date();
     trialEnds.setDate(trialEnds.getDate() + 7);
-
     await db.collection('usuarios').insertOne({
       username,
       password: hash,
@@ -75,27 +68,26 @@ app.post('/api/register', async (req, res) => {
       trialEndsAt: trialEnds.toISOString(),
       createdAt: new Date().toISOString()
     });
-
     res.json({
       success: true,
       user: { username, nome, email: email || '', licenseKey, status: 'trial', trialEndsAt: trialEnds.toISOString() }
     });
   } catch (e) {
+    if (e.message && e.message.includes('E11000')) {
+      return res.json({ success: false, error: "Usuario ja existe." });
+    }
     res.json({ success: false, error: "Erro ao cadastrar: " + (e.message || e) });
   }
 });
 
-// LOGIN
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
     const user = await db.collection('usuarios').findOne({ username });
-    
     if (!user) return res.json({ success: false, error: "Usuario nao encontrado." });
     if (!bcrypt.compareSync(password, user.password)) {
       return res.json({ success: false, error: "Senha incorreta." });
     }
-
     const agora = new Date();
     if (user.status === 'trial') {
       const trialEnd = new Date(user.trialEndsAt);
@@ -110,7 +102,6 @@ app.post('/api/login', async (req, res) => {
     if (user.status === 'inactive') {
       return res.json({ success: false, error: "Licenca desativada. Contate o administrador." });
     }
-
     res.json({
       success: true,
       user: {
@@ -127,12 +118,10 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// VALIDAR CHAVE
 app.get('/api/validate-key', async (req, res) => {
   try {
     const { key } = req.query;
     const user = await db.collection('usuarios').findOne({ licenseKey: key });
-    
     if (!user) return res.json({ success: false, error: "Chave invalida." });
     if (user.status === 'trial' && new Date() > new Date(user.trialEndsAt)) {
       await db.collection('usuarios').updateOne({ licenseKey: key }, { $set: { status: 'expired' } });
@@ -226,10 +215,11 @@ app.get('/api/health', (req, res) => {
 // INICIALIZA
 conectarMongo().then(() => {
   app.listen(PORT, () => {
-    console.log('🚀 PNCP Licencas API rodando na porta ' + PORT);
-    console.log('📦 Banco: MongoDB Atlas');
-    console.log('🔑 Admin Key: pncpAdmin2026!');
+    console.log('PNCP Licencas API rodando na porta ' + PORT);
+    console.log('Banco: MongoDB Atlas');
+    console.log('Admin Key: pncpAdmin2026!');
   });
 }).catch(err => {
-  console.error('❌ Erro ao conectar no MongoDB:', err);
-  
+  console.error('Erro ao conectar no MongoDB:', err);
+  process.exit(1);
+});

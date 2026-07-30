@@ -10,7 +10,7 @@ const ADMIN_KEY = "pncpAdmin2026!";
 // =========================================================
 // CONEXÃO MONGODB ATLAS
 // =========================================================
-const MONGO_URI = process.env.MONGO_URI || "mongodb://walteremanuel_db_user:oEY8KMaKvhIZEljT@ac-lw4fvfw-shard-00-00.fsea6qz.mongodb.net:27017,ac-lw4fvfw-shard-00-01.fsea6qz.mongodb.net:27017,ac-lw4fvfw-shard-00-02.fsea6qz.mongodb.net:27017/pncp_monitor?replicaSet=atlas-k8u0k2-shard-0&retryWrites=true&w=majority&tls=false";
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://pncp_admin:Pncp2026!@cluster0.fsea6qz.mongodb.net/pncp_monitor?retryWrites=true&w=majority";
 const DB_NAME = "pncp_monitor";
 
 let db;
@@ -18,7 +18,9 @@ let client;
 
 async function conectarMongo() {
   client = new MongoClient(MONGO_URI, {
-    tls: false,
+    tls: true,
+    tlsAllowInvalidCertificates: true,
+    tlsAllowInvalidHostnames: true,
     serverSelectionTimeoutMS: 15000
   });
   
